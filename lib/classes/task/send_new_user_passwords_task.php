@@ -48,7 +48,7 @@ class send_new_user_passwords_task extends scheduled_task {
         if ($DB->count_records('user_preferences', array('name' => 'create_password', 'value' => '1'))) {
             mtrace('Creating passwords for new users...');
             $usernamefields = get_all_user_name_fields(true, 'u');
-            $newusers = $DB->get_recordset_sql("SELECT u.id as id, u.email, u.auth, u.deleted,
+            $newusers = $DB->get_recordset_sql("SELECT u.id as id, u.email, u.auth, u.deleted, u.confirmed,
                                                      u.suspended, u.emailstop, u.mnethostid, u.mailformat,
                                                      $usernamefields, u.username, u.lang,
                                                      p.id as prefid
@@ -66,7 +66,9 @@ class send_new_user_passwords_task extends scheduled_task {
                 // time the user logs in.
                 if (setnew_password_and_mail($newuser, true)) {
                     unset_user_preference('create_password', $newuser);
-                    set_user_preference('auth_forcepasswordchange', 1, $newuser);
+                    if (!$newuser->confirmed) {
+                        set_user_preference('auth_forcepasswordchange', 1, $newuser);
+                    }
                 } else {
                     trigger_error("Could not create and mail new user password!");
                 }
